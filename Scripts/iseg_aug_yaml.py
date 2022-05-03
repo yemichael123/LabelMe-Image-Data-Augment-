@@ -129,12 +129,22 @@ class ImageAugmentation:
         
         if user_class!="default":
             data["shapes"][0]["label"] = user_class
-        data["shapes"][0]["shape_type"] = shape_type[rchoice]
-        data["shapes"][0]["points"] = new_coordinates1
-        data["imagePath"] = ".." + os.path.basename(new_path)
-        data["imageData"] = str(base64.b64encode(open(new_path,'rb').read()))[2:-1]
-        data["imageHeight"] = aug_img.shape[0]
-        data["imageWidth"] = aug_img.shape[1]
+        elif self.all_images:
+            for i, coord in enumerate(new_coordinates1):
+                data["shapes"][i]["shape_type"] = shape_type[rchoice]
+                data["shapes"][i]["points"] = coord
+            data["imagePath"] = ".." + os.path.basename(new_path)
+            data["imageData"] = str(base64.b64encode(open(new_path,'rb').read()))[2:-1]
+            data["imageHeight"] = aug_img.shape[0]
+            data["imageWidth"] = aug_img.shape[1]
+
+        else:
+            data["shapes"][0]["shape_type"] = shape_type[rchoice]
+            data["shapes"][0]["points"] = new_coordinates1
+            data["imagePath"] = ".." + os.path.basename(new_path)
+            data["imageData"] = str(base64.b64encode(open(new_path,'rb').read()))[2:-1]
+            data["imageHeight"] = aug_img.shape[0]
+            data["imageWidth"] = aug_img.shape[1]
 
         with open(json_path, 'w') as outfile:
             json.dump(data, outfile, indent=2)
@@ -188,10 +198,14 @@ class ImageAugmentation:
                     continue
 
                 iterations = len(coordinates) if self.all_images else self.ntimes_perbg
+                
                 # Transforms 
+                aug_cumulative = []
+                coord_cumulative = []
+                chosen = False
                 for j in range(0, iterations):               
-                    rchoice = random.choice(list_choice)
-                    aug_coordinates = coordinates[j] if self.all_images else coordinates[rchoice]
+                    rchoice = j if self.all_images else random.choice(list_choice)
+                    aug_coordinates = coordinates[rchoice]
                     aug_anno_img = anno_img
                     print("BEFORE: ", aug_coordinates)
                     
@@ -270,8 +284,7 @@ class ImageAugmentation:
                     res = cv2.bitwise_and(aug_anno_img, aug_anno_img, mask = mask)
                     
                     # Final image  
-                    if obj.checkarea(bg_img, aug_coordinates,self.ratio_threshold) == True:
-                        
+                    if self.all_images or obj.checkarea(bg_img, aug_coordinates,self.ratio_threshold) == True:
                         # Grayscale
                         if ts['grayscale']['grayscale_state'] == True:  
                             grayscaleprob = random.random()
@@ -283,11 +296,32 @@ class ImageAugmentation:
                             edgedetectionprob = random.random()
                             if ts['edgedetection']['edgedetection_prob'] == 1.0 or (edgedetectionprob <= ts['edgedetection']['edgedetection_prob'] and edgedetectionprob>0):
                                 bg_img, res = transforms().edgedetection(bg_img, res, ts['edgedetection']['edgedetection_choice'])
-                                
-                        aug_img = bg_img + res
-                        obj.dataformation(aug_img, aug_path, data, shape_type, rchoice, aug_coordinates, counter, self.user_class)
-                        counter+=1
-                        flag +=1
+                        print("j:", j)
+                        if not chosen:
+                            chosen = True
+                            aug_cumulative = np.zeros(bg_img.shape)
+                        if not self.all_images:
+                            aug_img = bg_img + res
+                            obj.dataformation(aug_img, aug_path, data, shape_type, rchoice, aug_coordinates, counter, self.user_class)
+                            counter+=1
+                            flag +=1
+                        else:
+                            print("AUG_CUMULATIVE")
+                            print(aug_cumulative)
+                            print("AUG_CUMULATIVE shape")
+                            print(aug_cumulative.shape)
+                            print("RES")
+                            print(res)
+                            print("RES shape")
+                            print(res.shape)
+                            
+                            aug_cumulative += res.astype(np.uint8).reshape(aug_cumulative.shape)
+                            coord_cumulative.append(aug_coordinates)
+
+                        if j == iterations - 1:
+                            obj.dataformation(aug_cumulative, aug_path, data, shape_type, rchoice, coord_cumulative, counter, self.user_class)
+                            counter+=1
+                            flag +=1
                     bg_img = dummy_bg.copy()
                     
         print("%d files formed!" % (flag))
