@@ -1,31 +1,42 @@
 ---
 inputs:
-  aimg_folderpath:  C:\Users\91954\Documents\GitHub\LabelMe-Image-Data-Augment-\Input_Images
-  ajson_folderpath:  C:\Users\91954\Documents\GitHub\LabelMe-Image-Data-Augment-\Input_JSONS
-  bgimg_folderpath:  C:\Users\91954\Documents\GitHub\LabelMe-Image-Data-Augment-\background_images
-  output_folderpath:  C:\Users\91954\Desktop\seal\Freshoutput
+  aimg_folderpath:  /mnt/c/Users/michye/Desktop/LabelMe-Image-Data-Augment-/Input_Images
+  ajson_folderpath:  /mnt/c/Users/michye/Desktop/LabelMe-Image-Data-Augment-/Input_JSONS
+  bgimg_folderpath:  /mnt/c/Users/michye/Desktop/LabelMe-Image-Data-Augment-/background_images
+  output_folderpath:  /mnt/c/Users/michye/Desktop/LabelMe-Image-Data-Augment-/Freshoutput
   bg_count:  10 
   ntimes_perbg:  5
+  all_images: True
   ratio_threshold :  0.1     # Ratio of annotated area to background image area. Combinations below this ratio will be neglected.
-  user_class:  default       # Specify a specific class or keep it default (takes the first annotated class) 
+  user_class: 
+    - sidewalk
+    - terrain
+    - vegetation
+    - pole
+    - person
+    - bicycle
+    - car
+    - building
+    - static
+
   pad_annotation: 5           # Amount(in pixels) of padding you want to add to the annotation (Works only on bounding box annotation)
 transforms:
   scaling:
-    scaling_state:  True
+    scaling_state:  False
     downscale_prob:  0.5
     downscale_factor:  2
     upscale_prob:  0.5
     upscale_factor:  2
   rotation:
-    rotation_state:  True
+    rotation_state:  False
     rotation_prob:  0.5
     rotlimitangle:  78
   flipping:
     flipping_state:  True
-    horizontal_flip_prob:  0.5
-    vertical_flip_prob:  0.5
+    horizontal_flip_prob:  0
+    vertical_flip_prob:  1
   randomshift:
-    shift_state:  True
+    shift_state:  False
     shift_prob:  1
   blur:
     blur_state:  True

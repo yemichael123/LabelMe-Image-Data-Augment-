@@ -22,8 +22,9 @@ class ImageAugmentation:
         self.bg_count = self.yamldata['inputs']['bg_count']
         self.ntimes_perbg = self.yamldata['inputs']['ntimes_perbg']
         self.ratio_threshold = self.yamldata['inputs']['ratio_threshold']
-        self.user_class = self.yamldata['inputs']['user_class']
+        self.user_class = self.yamldata['inputs']['user_class'] if self.yamldata['inputs']['all_images'] else self.yamldata['inputs']['user_class'][0]
         self.pad_annotation = self.yamldata['inputs']['pad_annotation']
+        self.all_images = self.yamldata['inputs']['all_images']
 
     def dataread(self,img, aimg_folderpath, ajson_folderpath, output_folderpath, user_class, pad):
         image_name = Path(img).stem
@@ -55,7 +56,7 @@ class ImageAugmentation:
             i = 0
             j = 0
             for k in data['shapes']:
-                    if data['shapes'][i]['label'] == user_class:
+                    if data['shapes'][i]['label'] == user_class or data['shapes'][i]['label'] in user_class:
                         coordinates.append( data['shapes'][i]['points'])
                         shape_type.append( data['shapes'][i]['shape_type'])
                         
@@ -106,10 +107,13 @@ class ImageAugmentation:
                 index.append(i)
                 
         if len(index) == 0:
+            print("yo")
             return dummy
         elif len(index) == len(coordinates):
+            print("yoo")
             return coordinates
         else:
+            print("yoooo")
             return dummy
 
     def dataformation(self,aug_img, aug_path, data, shape_type, rchoice, new_coordinates1, counter, user_class):    
@@ -175,18 +179,21 @@ class ImageAugmentation:
                 # Checks whether annotated area when pasted in background image is above a threshold or not                 
                 list_choice = []
                 for i in range(0,len(coordinates)):
-                    if obj.checkarea(bg_img, coordinates[i], self.ratio_threshold) == True:
+                    if self.all_images:
+                        list_choice.append(i)
+                    elif obj.checkarea(bg_img, coordinates[i], self.ratio_threshold) == True:
                         list_choice.append(i)
                 
                 if len(list_choice)==0:
                     continue
 
+                iterations = len(coordinates) if self.all_images else self.ntimes_perbg
                 # Transforms 
-                for j in range(0, self.ntimes_perbg):               
-                    
+                for j in range(0, iterations):               
                     rchoice = random.choice(list_choice)
-                    aug_coordinates = coordinates[rchoice]
+                    aug_coordinates = coordinates[j] if self.all_images else coordinates[rchoice]
                     aug_anno_img = anno_img
+                    print("BEFORE: ", aug_coordinates)
                     
                     # Downscale
                     if ts['scaling']['scaling_state'] == True:
@@ -248,10 +255,13 @@ class ImageAugmentation:
                             aug_anno_img, aug_coordinates = transforms().shift(aug_coordinates, aug_anno_img, bg_img)
                     
                     aug_anno_img = shape_adjustment().shape_adjust(aug_anno_img, bg_img.shape[1], bg_img.shape[0])
+                    print(bg_img.shape[1], bg_img.shape[0])
+                    print(aug_coordinates)
                     aug_coordinates = obj.cropitup(aug_coordinates,bg_img.shape[1], bg_img.shape[0])
                     
                     if len(aug_coordinates)==0:
                         continue
+                    print("hi")
                         
                     mask = np.zeros((aug_anno_img.shape[0], aug_anno_img.shape[1]), dtype=np.uint8)                   
                     points1 = np.round(np.expand_dims(np.array(aug_coordinates),0)).astype('int32')
