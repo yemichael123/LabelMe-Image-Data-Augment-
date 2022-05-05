@@ -71,9 +71,10 @@ class ImageAugmentation:
                         j = j + 1
                     i = i + 1
 
-        first_value=data["shapes"][0]
-        data["shapes"] = []
-        data["shapes"].append(first_value)    
+        if not self.all_images:
+            first_value=data["shapes"][0]
+            data["shapes"] = []
+            data["shapes"].append(first_value)    
 
         return (data, coordinates, shape_type, aug_path, anno_img)
 
@@ -127,9 +128,7 @@ class ImageAugmentation:
             ymin,ymax,xmin,xmax = findminmax(new_coordinates1)        
             new_coordinates1 = [[ymin, xmin], [ymax, xmax]] 
         
-        if user_class!="default":
-            data["shapes"][0]["label"] = user_class
-        elif self.all_images:
+        if self.all_images:
             for i, coord in enumerate(new_coordinates1):
                 data["shapes"][i]["shape_type"] = shape_type[rchoice]
                 data["shapes"][i]["points"] = coord
@@ -137,6 +136,8 @@ class ImageAugmentation:
             data["imageData"] = str(base64.b64encode(open(new_path,'rb').read()))[2:-1]
             data["imageHeight"] = aug_img.shape[0]
             data["imageWidth"] = aug_img.shape[1]
+        elif user_class!="default":
+            data["shapes"][0]["label"] = user_class
 
         else:
             data["shapes"][0]["shape_type"] = shape_type[rchoice]
