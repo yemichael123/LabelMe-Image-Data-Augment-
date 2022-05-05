@@ -4,7 +4,7 @@ inputs:
   ajson_folderpath:  /mnt/c/Users/michye/Desktop/LabelMe-Image-Data-Augment-/Input_JSONS
   bgimg_folderpath:  /mnt/c/Users/michye/Desktop/LabelMe-Image-Data-Augment-/background_images
   output_folderpath:  /mnt/c/Users/michye/Desktop/LabelMe-Image-Data-Augment-/Freshoutput
-  bg_count:  10 
+  bg_count:  1
   ntimes_perbg:  5
   all_images: True
   ratio_threshold :  0.1     # Ratio of annotated area to background image area. Combinations below this ratio will be neglected.

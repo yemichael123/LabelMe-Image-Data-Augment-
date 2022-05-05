@@ -165,6 +165,7 @@ class ImageAugmentation:
         flag = 0
 
         # Iterating on annotated images
+
         for img in inp_imgs:        
 
             data, coordinates, shape_type, aug_path, anno_img = obj.dataread(img, self.aimg_folderpath, self.ajson_folderpath, self.output_folderpath, self.user_class, self.pad_annotation)  
@@ -202,6 +203,7 @@ class ImageAugmentation:
                 # Transforms 
                 aug_cumulative = []
                 coord_cumulative = []
+                background = bg_img.copy()
                 chosen = False
                 for j in range(0, iterations):               
                     rchoice = j if self.all_images else random.choice(list_choice)
@@ -283,6 +285,13 @@ class ImageAugmentation:
                     cv2.fillPoly(bg_img, points1, 0)
                     res = cv2.bitwise_and(aug_anno_img, aug_anno_img, mask = mask)
                     
+                    '''if self.all_images:
+                        mask = np.zeros((aug_anno_img.shape[0], aug_anno_img.shape[1]), dtype=np.uint8)                   
+                        points1 = np.round(np.expand_dims(np.array(coordinates[rchoice]),0)).astype('int32')
+                        cv2.fillPoly(mask, points1, 255)
+                        patch = cv2.bitwise_and(aug_anno_img, aug_anno_img, mask = mask)
+                        background -= patch'''
+                        
                     # Final image  
                     if self.all_images or obj.checkarea(bg_img, aug_coordinates,self.ratio_threshold) == True:
                         # Grayscale
@@ -314,12 +323,16 @@ class ImageAugmentation:
                             print(res)
                             print("RES shape")
                             print(res.shape)
-                            
+
                             aug_cumulative += res.astype(np.uint8).reshape(aug_cumulative.shape)
                             coord_cumulative.append(aug_coordinates)
 
                         if j == iterations - 1:
-                            obj.dataformation(aug_cumulative, aug_path, data, shape_type, rchoice, coord_cumulative, counter, self.user_class)
+
+                            background, _ = transforms().flipvertical(background, [])  
+                            
+                            # aug_cumulative += background
+                            obj.dataformation(background, aug_path, data, shape_type, rchoice, coord_cumulative, counter, self.user_class)
                             counter+=1
                             flag +=1
                     bg_img = dummy_bg.copy()
