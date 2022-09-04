@@ -109,13 +109,10 @@ class ImageAugmentation:
                 index.append(i)
                 
         if len(index) == 0:
-            print("yo")
             return dummy
         elif len(index) == len(coordinates):
-            print("yoo")
             return coordinates
         else:
-            print("yoooo")
             return dummy
 
     def dataformation(self,aug_img, aug_path, data, shape_type, rchoice, new_coordinates1, counter, user_class, type="aug"):    
@@ -187,7 +184,7 @@ class ImageAugmentation:
                 bg = os.path.join(self.bgimg_folderpath, random.choice(bg_imgs)) # Selecting a random background image
                 bg_img = cv2.imread(bg)                 
                 dummy_bg = bg_img.copy()
-               
+            
                 
                 # Checks whether annotated area when pasted in background image is above a threshold or not                 
                 list_choice = []
@@ -237,12 +234,11 @@ class ImageAugmentation:
                             if (y_max < bg_img.shape[1] and y_min > 0 and x_max < bg_img.shape[0] and x_min > 0):
                                 aug_anno_img, aug_coordinates = transforms().upscale(aug_anno_img, aug_coordinates,ts['scaling']['upscale_factor'])
                     
-
                     # Flip 
                     if ts['flipping']['flipping_state'] == True:        
                         verticalprob =  random.random()
                         if ts['flipping']['vertical_flip_prob'] == 1.0 or (verticalprob <= ts['flipping']['vertical_flip_prob'] and verticalprob>0):                 
-                             aug_anno_img, aug_coordinates = transforms().flipvertical(aug_anno_img, aug_coordinates)  
+                            aug_anno_img, aug_coordinates = transforms().flipvertical(aug_anno_img, aug_coordinates)  
                                 
                         horizontalprob = random.random()
                         if ts['flipping']['horizontal_flip_prob'] == 1.0 or (horizontalprob <= ts['flipping']['horizontal_flip_prob'] and horizontalprob>0):
@@ -279,7 +275,6 @@ class ImageAugmentation:
                     
                     if len(aug_coordinates)==0:
                         continue
-                    print("hi")
                         
                     mask = np.zeros((aug_anno_img.shape[0], aug_anno_img.shape[1]), dtype=np.uint8)                   
                     points1 = np.round(np.expand_dims(np.array(aug_coordinates),0)).astype('int32')
@@ -307,7 +302,6 @@ class ImageAugmentation:
                             edgedetectionprob = random.random()
                             if ts['edgedetection']['edgedetection_prob'] == 1.0 or (edgedetectionprob <= ts['edgedetection']['edgedetection_prob'] and edgedetectionprob>0):
                                 bg_img, res = transforms().edgedetection(bg_img, res, ts['edgedetection']['edgedetection_choice'])
-                        print("j:", j)
                         if not chosen:
                             chosen = True
                             aug_cumulative = np.zeros(bg_img.shape)
@@ -317,44 +311,47 @@ class ImageAugmentation:
                             counter+=1
                             flag +=1
                         else:
-                            print("AUG_CUMULATIVE")
-                            print(aug_cumulative)
-                            print("AUG_CUMULATIVE shape")
-                            print(aug_cumulative.shape)
-                            print("RES")
-                            print(res)
-                            print("RES shape")
-                            print(res.shape)
-
                             aug_cumulative += res.astype(np.uint8).reshape(aug_cumulative.shape)
                             coord_cumulative.append(aug_coordinates)
+                        print(len(coord_cumulative))
 
-                        if j == iterations - 1:
-                            transformations = ['flip', 'noise', 'blur', 'grayscale']
-                            for length in range(len(transformations) + 1):
-                                if length == 0:
-                                    continue
+                mask = np.zeros((anno_img.shape[0], anno_img.shape[1]), dtype=np.uint8)                   
+                res = cv2.bitwise_and(anno_img, anno_img, mask = mask)
 
-                                for transformation_subset in itertools.combinations(transformations, length):
-                                    counter+=1
-                                    flag +=1
-                                    background_temp = background
-                                    coord_cumulative_temp = coord_cumulative
-                                    type_name = ""
-                                    # conditionals are in place rather than iterating through transformation_subset to ensure transformation order
-                                    if 'flip' in transformation_subset:
-                                        background_temp, coord_cumulative_temp = transforms().flipvertical(background_temp, [])
-                                        type_name += '_flip'
-                                    if 'noise' in transformation_subset:
-                                        background_temp = transforms().noise(background_temp, 0)
-                                        type_name += '_noise'
-                                    if 'blur' in transformation_subset:
-                                        background_temp = transforms().blur(background_temp, 0)
-                                        type_name += '_blur'
-                                    if 'grayscale' in transformation_subset:
-                                        background_temp, _ = transforms().grayscale(background_temp, res, 0)
-                                        type_name += '_grayscale'
-                                    obj.dataformation(background_temp, aug_path, data, shape_type, rchoice, coord_cumulative_temp, counter, self.user_class, type=type_name)
+                flipped_coordinates = []
+                flipped_img = []
+                for i in range(len(coordinates)):
+                    flipped_img, aug_coordinates = transforms().flipvertical(anno_img, coordinates[i])
+                    aug_coordinates = obj.cropitup(aug_coordinates, anno_img.shape[1], anno_img.shape[0])
+                    flipped_coordinates.append(aug_coordinates)
+
+                print(len(coordinates))
+                print(len(flipped_coordinates))
+                transformations = ['flip', 'noise', 'blur', 'grayscale']
+                for length in range(len(transformations) + 1):
+                    if length == 0:
+                        continue
+
+                    for transformation_subset in itertools.combinations(transformations, length):
+                        counter+=1
+                        flag +=1
+                        anno_img_temp = anno_img
+                        type_name = ""
+                        coordinates_temp = coordinates
+                        # conditionals are in place rather than iterating through transformation_subset to ensure transformation order
+                        if 'flip' in transformation_subset:
+                            anno_img_temp, coordinates_temp = flipped_img, flipped_coordinates
+                            type_name += '_flip'
+                        if 'noise' in transformation_subset:
+                            anno_img_temp = transforms().noise(anno_img_temp, 0)
+                            type_name += '_noise'
+                        if 'blur' in transformation_subset:
+                            anno_img_temp = transforms().blur(anno_img_temp, 0)
+                            type_name += '_blur'
+                        if 'grayscale' in transformation_subset:
+                            anno_img_temp, _ = transforms().grayscale(anno_img_temp, res, 0)
+                            type_name += '_grayscale'
+                        obj.dataformation(anno_img_temp, aug_path, data, shape_type, 0, coordinates_temp, counter, self.user_class, type=type_name)
                     bg_img = dummy_bg.copy()
                     
         print("%d files formed!" % (flag))
