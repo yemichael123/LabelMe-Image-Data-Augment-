@@ -33,7 +33,7 @@ transforms:
     rotation_prob:  0.5
     rotlimitangle:  78
   flipping:
-    flipping_state:  True
+    flipping_state:  False
     horizontal_flip_prob:  0
     vertical_flip_prob:  1
   randomshift:

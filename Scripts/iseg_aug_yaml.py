@@ -119,10 +119,10 @@ class ImageAugmentation:
             return dummy
 
     def dataformation(self,aug_img, aug_path, data, shape_type, rchoice, new_coordinates1, counter, user_class, type="aug"):    
-        new_path = aug_path + f"_{type}" + ".jpg"
+        new_path = aug_path + f"{type}" + ".jpg"
         cv2.imwrite(new_path, aug_img.astype(np.uint8))
 
-        json_path = aug_path + f"_{type}" + ".json"
+        json_path = aug_path + f"{type}" + ".json"
 
         # Condition specific for bounding box
         if shape_type[rchoice]=="rectangle":    
@@ -330,23 +330,31 @@ class ImageAugmentation:
                             coord_cumulative.append(aug_coordinates)
 
                         if j == iterations - 1:
-                            background, _ = transforms().flipvertical(background, [])
-                            obj.dataformation(background, aug_path, data, shape_type, rchoice, coord_cumulative, counter, self.user_class, type="flip")
+                            transformations = ['flip', 'noise', 'blur', 'grayscale']
+                            for length in range(len(transformations) + 1):
+                                if length == 0:
+                                    continue
 
-                            background = transforms().noise(background, 0)
-                            obj.dataformation(background, aug_path, data, shape_type, rchoice, coord_cumulative, counter, self.user_class, type="noise")
-
-                            background, _ = transforms().grayscale(background, res, 0)
-                            obj.dataformation(background, aug_path, data, shape_type, rchoice, coord_cumulative, counter, self.user_class, type="grayscale")
-
-                            background = transforms().blur(background, 0)
-                            obj.dataformation(background, aug_path, data, shape_type, rchoice, coord_cumulative, counter, self.user_class, type="blur")
-
-                           
-
-
-                            counter+=1
-                            flag +=1
+                                for transformation_subset in itertools.combinations(transformations, length):
+                                    counter+=1
+                                    flag +=1
+                                    background_temp = background
+                                    coord_cumulative_temp = coord_cumulative
+                                    type_name = ""
+                                    # conditionals are in place rather than iterating through transformation_subset to ensure transformation order
+                                    if 'flip' in transformation_subset:
+                                        background_temp, coord_cumulative_temp = transforms().flipvertical(background_temp, [])
+                                        type_name += '_flip'
+                                    if 'noise' in transformation_subset:
+                                        background_temp = transforms().noise(background_temp, 0)
+                                        type_name += '_noise'
+                                    if 'blur' in transformation_subset:
+                                        background_temp = transforms().blur(background_temp, 0)
+                                        type_name += '_blur'
+                                    if 'grayscale' in transformation_subset:
+                                        background_temp, _ = transforms().grayscale(background_temp, res, 0)
+                                        type_name += '_grayscale'
+                                    obj.dataformation(background_temp, aug_path, data, shape_type, rchoice, coord_cumulative_temp, counter, self.user_class, type=type_name)
                     bg_img = dummy_bg.copy()
                     
         print("%d files formed!" % (flag))
