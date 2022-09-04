@@ -131,7 +131,7 @@ class ImageAugmentation:
         
         if self.all_images:
             for i, coord in enumerate(new_coordinates1):
-                data["shapes"][i]["shape_type"] = shape_type[rchoice]
+                data["shapes"][i]["shape_type"] = "polygon"
                 data["shapes"][i]["points"] = coord
             data["imagePath"] = ".." + os.path.basename(new_path)
             data["imageData"] = str(base64.b64encode(open(new_path,'rb').read()))[2:-1]
