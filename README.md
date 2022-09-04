@@ -1,5 +1,8 @@
 # Image Data Augmentation
 
+## For Honda:
+Put our jpg dataset in Input_Images/ and Labelme Dataset in Input_JSONS/.
+Then run python3 Scripts/iseg_aug_yaml.py --yaml_path input.yaml. Augmented photos will be in Freshoutput/
 ## Introduction
 
 This script is used to augment image data created using **LabelMe-MIT**.

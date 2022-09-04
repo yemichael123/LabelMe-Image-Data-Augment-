@@ -40,7 +40,7 @@ class ImageAugmentation:
         data = json.load(f)      
         f.close()
         
-        coordinates = [[]]
+        coordinates = []
         shape_type = [[]]
         
         if user_class == "default":
@@ -71,6 +71,9 @@ class ImageAugmentation:
                             coordinates[j] = [[y_min,x_min],[y_max,x_min],[y_max,x_max],[y_min,x_max]] 
                         j = j + 1
                     i = i + 1
+            # print("i", i)
+            # print("coord len", len(coordinates))
+            # print(coordinates)
 
         if not self.all_images:
             first_value=data["shapes"][0]
@@ -179,142 +182,144 @@ class ImageAugmentation:
             counter = 1  # Counts the number of augmentation per annotated image
 
             # Iterating through a given no. of background images 
-            for backgrounds in range(0, self.bg_count):
+            if not self.all_images:
+                for backgrounds in range(0, self.bg_count):
 
-                bg = os.path.join(self.bgimg_folderpath, random.choice(bg_imgs)) # Selecting a random background image
-                bg_img = cv2.imread(bg)                 
-                dummy_bg = bg_img.copy()
-            
+                    bg = os.path.join(self.bgimg_folderpath, random.choice(bg_imgs)) # Selecting a random background image
+                    bg_img = cv2.imread(bg)                 
+                    dummy_bg = bg_img.copy()
                 
-                # Checks whether annotated area when pasted in background image is above a threshold or not                 
-                list_choice = []
-                for i in range(0,len(coordinates)):
-                    if self.all_images:
-                        list_choice.append(i)
-                    elif obj.checkarea(bg_img, coordinates[i], self.ratio_threshold) == True:
-                        list_choice.append(i)
-                
-                if len(list_choice)==0:
-                    continue
-
-                iterations = len(coordinates) if self.all_images else self.ntimes_perbg
-                
-                # Transforms 
-                aug_cumulative = []
-                coord_cumulative = []
-                background = bg_img.copy()
-                chosen = False
-                for j in range(0, iterations):               
-                    rchoice = j if self.all_images else random.choice(list_choice)
-                    aug_coordinates = coordinates[rchoice]
-                    aug_anno_img = anno_img
-                    print("BEFORE: ", aug_coordinates)
                     
-                    # Downscale
-                    if ts['scaling']['scaling_state'] == True:
-                        downscaleprob = random.random()
-                        if ts['scaling']['downscale_prob'] == 1.0 or (downscaleprob <= ts['scaling']['downscale_prob'] and downscaleprob>0):
-                            new_coordinates = [[i[0]/ts['scaling']['downscale_factor'], i[1]/ts['scaling']['downscale_factor']] for i in aug_coordinates]
-                            if obj.checkarea(bg_img, new_coordinates, self.ratio_threshold) == True:
-                                aug_anno_img, aug_coordinates = transforms().downscale(aug_anno_img, aug_coordinates, ts['scaling']['downscale_factor'])
-                                
-                    # Rotate
-                    if ts['rotation']['rotation_state'] == True:
-                        rotationprob = random.random()
-                        if ts['rotation']['rotation_prob'] == 1.0 or (rotationprob <= ts['rotation']['rotation_prob'] and rotationprob>0):
-                            if rotlimitangle != 0:
-                                aug_anno_img, aug_coordinates = transforms().rotation(aug_anno_img, aug_coordinates, rotlimitangle)
+                    # Checks whether annotated area when pasted in background image is above a threshold or not                 
+                    list_choice = []
+                    for i in range(0,len(coordinates)):
+                        if self.all_images:
+                            list_choice.append(i)
+                        elif obj.checkarea(bg_img, coordinates[i], self.ratio_threshold) == True:
+                            list_choice.append(i)
                     
-                    # Upscale
-                    if ts['scaling']['scaling_state'] == True:      
-                        upscaleprob = random.random()
-                        if ts['scaling']['upscale_prob'] == 1.0 or (upscaleprob <= ts['scaling']['upscale_prob'] and upscaleprob>0):
-                            new_coordinates = [[i[0]*ts['scaling']['upscale_factor'], i[1]*ts['scaling']['upscale_factor']] for i in aug_coordinates]
-                            y_min, y_max, x_min, x_max = obj.findminmax(new_coordinates)
-                            if (y_max < bg_img.shape[1] and y_min > 0 and x_max < bg_img.shape[0] and x_min > 0):
-                                aug_anno_img, aug_coordinates = transforms().upscale(aug_anno_img, aug_coordinates,ts['scaling']['upscale_factor'])
-                    
-                    # Flip 
-                    if ts['flipping']['flipping_state'] == True:        
-                        verticalprob =  random.random()
-                        if ts['flipping']['vertical_flip_prob'] == 1.0 or (verticalprob <= ts['flipping']['vertical_flip_prob'] and verticalprob>0):                 
-                            aug_anno_img, aug_coordinates = transforms().flipvertical(aug_anno_img, aug_coordinates)  
-                                
-                        horizontalprob = random.random()
-                        if ts['flipping']['horizontal_flip_prob'] == 1.0 or (horizontalprob <= ts['flipping']['horizontal_flip_prob'] and horizontalprob>0):
-                            aug_anno_img, aug_coordinates = transforms().fliphorizontal(aug_anno_img, aug_coordinates) 
-                    
-                    # Brightness and Contrast                   
-                    if ts['brightness-contrast']['brightness-contrast_state'] == True: 
-                        bcprob = random.random()
-                        if ts['brightness-contrast']['brightness-contrast_prob'] == 1.0 or (bcprob <= ts['brightness-contrast']['brightness-contrast_prob'] and bcprob>0):
-                            aug_anno_img = cv2.convertScaleAbs(aug_anno_img, alpha=ts['brightness-contrast']['alpha'], beta=ts['brightness-contrast']['beta'])
-                            
-                    # BLur                   
-                    if ts['blur']['blur_state'] == True: 
-                        blurprob = random.random()
-                        if ts['blur']['blur_prob'] == 1.0 or (blurprob <= ts['blur']['blur_prob'] and blurprob>0):
-                            aug_anno_img = transforms().blur(aug_anno_img, ts['blur']['blur_choice'])
-                        
-                    # Noise
-                    if ts['noise']['noise_state'] == True:
-                        noiseprob = random.random()
-                        if ts['noise']['noise_prob'] == 1.0 or (noiseprob <=ts['noise']['noise_prob'] and noiseprob>0):
-                            aug_anno_img = transforms().noise(aug_anno_img, ts['noise']['noise_choice'], ts['noise']['gauss'], ts['noise']['salt&pepper'], ts['noise']['speckle'])
-                    
-                    # Shift
-                    if ts['randomshift']['shift_state'] == True:  
-                        shiftprob = random.random()
-                        if ts['randomshift']['shift_prob'] == 1.0 or (shiftprob <= ts['randomshift']['shift_prob'] and shiftprob>0):
-                            aug_anno_img, aug_coordinates = transforms().shift(aug_coordinates, aug_anno_img, bg_img)
-                    
-                    aug_anno_img = shape_adjustment().shape_adjust(aug_anno_img, bg_img.shape[1], bg_img.shape[0])
-                    print(bg_img.shape[1], bg_img.shape[0])
-                    print(aug_coordinates)
-                    aug_coordinates = obj.cropitup(aug_coordinates,bg_img.shape[1], bg_img.shape[0])
-                    
-                    if len(aug_coordinates)==0:
+                    if len(list_choice)==0:
                         continue
-                        
-                    mask = np.zeros((aug_anno_img.shape[0], aug_anno_img.shape[1]), dtype=np.uint8)                   
-                    points1 = np.round(np.expand_dims(np.array(aug_coordinates),0)).astype('int32')
-                    cv2.fillPoly(mask, points1, 255)
-                    cv2.fillPoly(bg_img, points1, 0)
-                    res = cv2.bitwise_and(aug_anno_img, aug_anno_img, mask = mask)
-                    
-                    '''if self.all_images:
-                        mask = np.zeros((aug_anno_img.shape[0], aug_anno_img.shape[1]), dtype=np.uint8)                   
-                        points1 = np.round(np.expand_dims(np.array(coordinates[rchoice]),0)).astype('int32')
-                        cv2.fillPoly(mask, points1, 255)
-                        patch = cv2.bitwise_and(aug_anno_img, aug_anno_img, mask = mask)
-                        background -= patch'''
-                        
-                    # Final image  
-                    if self.all_images or obj.checkarea(bg_img, aug_coordinates,self.ratio_threshold) == True:
-                        # Grayscale
-                        if ts['grayscale']['grayscale_state'] == True:  
-                            grayscaleprob = random.random()
-                            if ts['grayscale']['grayscale_prob'] == 1.0 or (grayscaleprob <= ts['grayscale']['grayscale_prob'] and grayscaleprob>0):
-                                bg_img, res = transforms().grayscale(bg_img, res, ts['grayscale']['grayscale_choice'])
-                                
-                        # Edge Detection    
-                        if ts['edgedetection']['edgedetection_state'] == True:  
-                            edgedetectionprob = random.random()
-                            if ts['edgedetection']['edgedetection_prob'] == 1.0 or (edgedetectionprob <= ts['edgedetection']['edgedetection_prob'] and edgedetectionprob>0):
-                                bg_img, res = transforms().edgedetection(bg_img, res, ts['edgedetection']['edgedetection_choice'])
-                        if not chosen:
-                            chosen = True
-                            aug_cumulative = np.zeros(bg_img.shape)
-                        if not self.all_images:
-                            aug_img = bg_img + res
-                            obj.dataformation(aug_img, aug_path, data, shape_type, rchoice, aug_coordinates, counter, self.user_class)
-                            counter+=1
-                            flag +=1
-                        else:
-                            aug_cumulative += res.astype(np.uint8).reshape(aug_cumulative.shape)
-                            coord_cumulative.append(aug_coordinates)
-                        print(len(coord_cumulative))
 
+                    iterations = len(coordinates) if self.all_images else self.ntimes_perbg
+                    
+                    # Transforms 
+                    aug_cumulative = []
+                    coord_cumulative = []
+                    background = bg_img.copy()
+                    chosen = False
+                    for j in range(0, iterations):               
+                        rchoice = j if self.all_images else random.choice(list_choice)
+                        aug_coordinates = coordinates[rchoice]
+                        aug_anno_img = anno_img
+                        print("BEFORE: ", aug_coordinates)
+                        
+                        # Downscale
+                        if ts['scaling']['scaling_state'] == True:
+                            downscaleprob = random.random()
+                            if ts['scaling']['downscale_prob'] == 1.0 or (downscaleprob <= ts['scaling']['downscale_prob'] and downscaleprob>0):
+                                new_coordinates = [[i[0]/ts['scaling']['downscale_factor'], i[1]/ts['scaling']['downscale_factor']] for i in aug_coordinates]
+                                if obj.checkarea(bg_img, new_coordinates, self.ratio_threshold) == True:
+                                    aug_anno_img, aug_coordinates = transforms().downscale(aug_anno_img, aug_coordinates, ts['scaling']['downscale_factor'])
+                                    
+                        # Rotate
+                        if ts['rotation']['rotation_state'] == True:
+                            rotationprob = random.random()
+                            if ts['rotation']['rotation_prob'] == 1.0 or (rotationprob <= ts['rotation']['rotation_prob'] and rotationprob>0):
+                                if rotlimitangle != 0:
+                                    aug_anno_img, aug_coordinates = transforms().rotation(aug_anno_img, aug_coordinates, rotlimitangle)
+                        
+                        # Upscale
+                        if ts['scaling']['scaling_state'] == True:      
+                            upscaleprob = random.random()
+                            if ts['scaling']['upscale_prob'] == 1.0 or (upscaleprob <= ts['scaling']['upscale_prob'] and upscaleprob>0):
+                                new_coordinates = [[i[0]*ts['scaling']['upscale_factor'], i[1]*ts['scaling']['upscale_factor']] for i in aug_coordinates]
+                                y_min, y_max, x_min, x_max = obj.findminmax(new_coordinates)
+                                if (y_max < bg_img.shape[1] and y_min > 0 and x_max < bg_img.shape[0] and x_min > 0):
+                                    aug_anno_img, aug_coordinates = transforms().upscale(aug_anno_img, aug_coordinates,ts['scaling']['upscale_factor'])
+                        
+                        # Flip 
+                        if ts['flipping']['flipping_state'] == True:        
+                            verticalprob =  random.random()
+                            if ts['flipping']['vertical_flip_prob'] == 1.0 or (verticalprob <= ts['flipping']['vertical_flip_prob'] and verticalprob>0):                 
+                                aug_anno_img, aug_coordinates = transforms().flipvertical(aug_anno_img, aug_coordinates)  
+                                    
+                            horizontalprob = random.random()
+                            if ts['flipping']['horizontal_flip_prob'] == 1.0 or (horizontalprob <= ts['flipping']['horizontal_flip_prob'] and horizontalprob>0):
+                                aug_anno_img, aug_coordinates = transforms().fliphorizontal(aug_anno_img, aug_coordinates) 
+                        
+                        # Brightness and Contrast                   
+                        if ts['brightness-contrast']['brightness-contrast_state'] == True: 
+                            bcprob = random.random()
+                            if ts['brightness-contrast']['brightness-contrast_prob'] == 1.0 or (bcprob <= ts['brightness-contrast']['brightness-contrast_prob'] and bcprob>0):
+                                aug_anno_img = cv2.convertScaleAbs(aug_anno_img, alpha=ts['brightness-contrast']['alpha'], beta=ts['brightness-contrast']['beta'])
+                                
+                        # BLur                   
+                        if ts['blur']['blur_state'] == True: 
+                            blurprob = random.random()
+                            if ts['blur']['blur_prob'] == 1.0 or (blurprob <= ts['blur']['blur_prob'] and blurprob>0):
+                                aug_anno_img = transforms().blur(aug_anno_img, ts['blur']['blur_choice'])
+                            
+                        # Noise
+                        if ts['noise']['noise_state'] == True:
+                            noiseprob = random.random()
+                            if ts['noise']['noise_prob'] == 1.0 or (noiseprob <=ts['noise']['noise_prob'] and noiseprob>0):
+                                aug_anno_img = transforms().noise(aug_anno_img, ts['noise']['noise_choice'], ts['noise']['gauss'], ts['noise']['salt&pepper'], ts['noise']['speckle'])
+                        
+                        # Shift
+                        if ts['randomshift']['shift_state'] == True:  
+                            shiftprob = random.random()
+                            if ts['randomshift']['shift_prob'] == 1.0 or (shiftprob <= ts['randomshift']['shift_prob'] and shiftprob>0):
+                                aug_anno_img, aug_coordinates = transforms().shift(aug_coordinates, aug_anno_img, bg_img)
+                        
+                        aug_anno_img = shape_adjustment().shape_adjust(aug_anno_img, bg_img.shape[1], bg_img.shape[0])
+                        print(bg_img.shape[1], bg_img.shape[0])
+                        print(aug_coordinates)
+                        aug_coordinates = obj.cropitup(aug_coordinates,bg_img.shape[1], bg_img.shape[0])
+                        
+                        if len(aug_coordinates)==0:
+                            continue
+                            
+                        mask = np.zeros((aug_anno_img.shape[0], aug_anno_img.shape[1]), dtype=np.uint8)                   
+                        points1 = np.round(np.expand_dims(np.array(aug_coordinates),0)).astype('int32')
+                        cv2.fillPoly(mask, points1, 255)
+                        cv2.fillPoly(bg_img, points1, 0)
+                        res = cv2.bitwise_and(aug_anno_img, aug_anno_img, mask = mask)
+                        
+                        '''if self.all_images:
+                            mask = np.zeros((aug_anno_img.shape[0], aug_anno_img.shape[1]), dtype=np.uint8)                   
+                            points1 = np.round(np.expand_dims(np.array(coordinates[rchoice]),0)).astype('int32')
+                            cv2.fillPoly(mask, points1, 255)
+                            patch = cv2.bitwise_and(aug_anno_img, aug_anno_img, mask = mask)
+                            background -= patch'''
+                            
+                        # Final image  
+                        if self.all_images or obj.checkarea(bg_img, aug_coordinates,self.ratio_threshold) == True:
+                            # Grayscale
+                            if ts['grayscale']['grayscale_state'] == True:  
+                                grayscaleprob = random.random()
+                                if ts['grayscale']['grayscale_prob'] == 1.0 or (grayscaleprob <= ts['grayscale']['grayscale_prob'] and grayscaleprob>0):
+                                    bg_img, res = transforms().grayscale(bg_img, res, ts['grayscale']['grayscale_choice'])
+                                    
+                            # Edge Detection    
+                            if ts['edgedetection']['edgedetection_state'] == True:  
+                                edgedetectionprob = random.random()
+                                if ts['edgedetection']['edgedetection_prob'] == 1.0 or (edgedetectionprob <= ts['edgedetection']['edgedetection_prob'] and edgedetectionprob>0):
+                                    bg_img, res = transforms().edgedetection(bg_img, res, ts['edgedetection']['edgedetection_choice'])
+                            if not chosen:
+                                chosen = True
+                                aug_cumulative = np.zeros(bg_img.shape)
+                            if not self.all_images:
+                                aug_img = bg_img + res
+                                obj.dataformation(aug_img, aug_path, data, shape_type, rchoice, aug_coordinates, counter, self.user_class)
+                                counter+=1
+                                flag +=1
+                            else:
+                                aug_cumulative += res.astype(np.uint8).reshape(aug_cumulative.shape)
+                                coord_cumulative.append(aug_coordinates)
+                            print(len(coord_cumulative))
+
+            else:
                 mask = np.zeros((anno_img.shape[0], anno_img.shape[1]), dtype=np.uint8)                   
                 res = cv2.bitwise_and(anno_img, anno_img, mask = mask)
 
@@ -352,7 +357,6 @@ class ImageAugmentation:
                             anno_img_temp, _ = transforms().grayscale(anno_img_temp, res, 0)
                             type_name += '_grayscale'
                         obj.dataformation(anno_img_temp, aug_path, data, shape_type, 0, coordinates_temp, counter, self.user_class, type=type_name)
-                    bg_img = dummy_bg.copy()
                     
         print("%d files formed!" % (flag))
         
