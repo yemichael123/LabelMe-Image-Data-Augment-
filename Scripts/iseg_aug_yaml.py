@@ -10,6 +10,7 @@ from pathlib import Path
 import yaml
 from transforms import *
 from shape_adjustment import *
+import itertools
 
 class ImageAugmentation:
     
@@ -30,7 +31,7 @@ class ImageAugmentation:
         image_name = Path(img).stem
         anno_img_path = os.path.join(aimg_folderpath, img)
         anno_img_json = os.path.join(ajson_folderpath, image_name + ".json")
-        aug_path = os.path.join(output_folderpath,image_name + "_aug_")          
+        aug_path = os.path.join(output_folderpath,image_name)
         anno_img = cv2.imread(anno_img_path)
         height, width = anno_img.shape[0], anno_img.shape[1]
         
@@ -117,11 +118,11 @@ class ImageAugmentation:
             print("yoooo")
             return dummy
 
-    def dataformation(self,aug_img, aug_path, data, shape_type, rchoice, new_coordinates1, counter, user_class):    
-        new_path = aug_path + str(counter) + ".jpg"
+    def dataformation(self,aug_img, aug_path, data, shape_type, rchoice, new_coordinates1, counter, user_class, type="aug"):    
+        new_path = aug_path + f"_{type}" + ".jpg"
         cv2.imwrite(new_path, aug_img.astype(np.uint8))
 
-        json_path = aug_path + str(counter) + ".json"
+        json_path = aug_path + f"_{type}" + ".json"
 
         # Condition specific for bounding box
         if shape_type[rchoice]=="rectangle":    
@@ -329,11 +330,21 @@ class ImageAugmentation:
                             coord_cumulative.append(aug_coordinates)
 
                         if j == iterations - 1:
+                            background, _ = transforms().flipvertical(background, [])
+                            obj.dataformation(background, aug_path, data, shape_type, rchoice, coord_cumulative, counter, self.user_class, type="flip")
 
-                            background, _ = transforms().flipvertical(background, [])  
-                            
-                            # aug_cumulative += background
-                            obj.dataformation(background, aug_path, data, shape_type, rchoice, coord_cumulative, counter, self.user_class)
+                            background = transforms().noise(background, 0)
+                            obj.dataformation(background, aug_path, data, shape_type, rchoice, coord_cumulative, counter, self.user_class, type="noise")
+
+                            background, _ = transforms().grayscale(background, res, 0)
+                            obj.dataformation(background, aug_path, data, shape_type, rchoice, coord_cumulative, counter, self.user_class, type="grayscale")
+
+                            background = transforms().blur(background, 0)
+                            obj.dataformation(background, aug_path, data, shape_type, rchoice, coord_cumulative, counter, self.user_class, type="blur")
+
+                           
+
+
                             counter+=1
                             flag +=1
                     bg_img = dummy_bg.copy()
