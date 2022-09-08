@@ -112,10 +112,12 @@ class ImageAugmentation:
                 index.append(i)
                 
         if len(index) == 0:
+            print("Coordinate ignored")
             return dummy
         elif len(index) == len(coordinates):
             return coordinates
         else:
+            print("Coordinate ignored")
             return dummy
 
     def dataformation(self,aug_img, aug_path, data, shape_type, rchoice, new_coordinates1, counter, user_class, type="aug"):    
@@ -320,6 +322,7 @@ class ImageAugmentation:
                             print(len(coord_cumulative))
 
             else:
+                print(img)
                 mask = np.zeros((anno_img.shape[0], anno_img.shape[1]), dtype=np.uint8)                   
                 res = cv2.bitwise_and(anno_img, anno_img, mask = mask)
 
@@ -327,11 +330,13 @@ class ImageAugmentation:
                 flipped_img = []
                 for i in range(len(coordinates)):
                     flipped_img, aug_coordinates = transforms().flipvertical(anno_img, coordinates[i])
-                    aug_coordinates = obj.cropitup(aug_coordinates, anno_img.shape[1], anno_img.shape[0])
+                    # print("aug coordinates before crop", aug_coordinates)
+                    # aug_coordinates = obj.cropitup(aug_coordinates, anno_img.shape[1], anno_img.shape[0])
+                    # print("aug coordinates after crop", aug_coordinates)
                     flipped_coordinates.append(aug_coordinates)
 
-                print(len(coordinates))
-                print(len(flipped_coordinates))
+                # print(coordinates)
+                # print(flipped_coordinates)
                 transformations = ['flip', 'noise', 'blur', 'grayscale']
                 for length in range(len(transformations) + 1):
                     if length == 0:
